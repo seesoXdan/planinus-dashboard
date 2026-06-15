@@ -148,6 +148,15 @@ body.admin .add-btn{display:inline-flex}
 .filt{font-size:12.5px;font-weight:600;color:var(--ink-2);background:var(--bg);border:1px solid var(--line);padding:8px 15px;border-radius:999px;cursor:pointer;transition:.18s;letter-spacing:-.01em}
 .filt:hover{border-color:var(--ink-3);color:var(--ink)}
 .filt.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.filt-manage{display:none;color:var(--brand);background:var(--brand-soft);border:1px dashed #9ccabf}
+body.admin .filt-manage{display:inline-flex;align-items:center;gap:5px}
+.filt-manage:hover{background:var(--brand);color:#fff;border-style:solid}
+/* 카테고리 관리 모달 */
+.cat-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cat-row .cat-input{flex:1;font-family:var(--font);font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;transition:.16s}
+.cat-row .cat-input:focus{outline:0;border-color:var(--brand);background:var(--surface);box-shadow:0 0 0 3px var(--brand-soft)}
+.cat-row .cat-cnt{font-size:11.5px;color:var(--ink-3);white-space:nowrap;min-width:34px;text-align:right}
+.cat-row .btn{padding:9px 14px;font-size:12.5px;flex:none}
 .view-seg{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
 .view-seg button{font-size:12px;font-weight:600;color:var(--ink-2);background:transparent;border:0;padding:7px 15px;border-radius:999px;cursor:pointer;transition:.18s;letter-spacing:-.01em}
 .view-seg button:hover{color:var(--ink)}
@@ -814,6 +823,12 @@ function renderFilters(){
     b.onclick=()=>{ ui.filter=cat; renderFilters(); renderGantt(); };
     wrap.appendChild(b);
   });
+  if(isAdmin){
+    const m=document.createElement("button");
+    m.className="filt filt-manage"; m.innerHTML="⚙ 카테고리 관리"; m.title="카테고리 이름 변경·삭제·추가";
+    m.onclick=openCatManager;
+    wrap.appendChild(m);
+  }
 }
 function renderMs(){
   const list=$("#ms-list"); list.innerHTML="";
@@ -988,6 +1003,68 @@ $("#add-task").onclick=()=>openForm("추진 일정 추가",taskFields(),
 function editTask(i){ openForm("추진 일정 수정",taskFields(),state.tasks[i],
   out=>{ addCatIfNew(out.cat); state.tasks[i]=out; save(); renderFilters(); renderGantt(); },
   ()=>{ state.tasks.splice(i,1); save(); renderFilters(); renderGantt(); }); }
+
+/* 카테고리 관리 (이름 변경 · 삭제 · 추가) */
+function catCount(c){ return state.tasks.filter(t=>t.cat===c).length; }
+function openCatManager(){
+  if(!isAdmin) return;
+  $("#modal-title").textContent="카테고리 관리";
+  const body=$("#modal-body");
+  function draw(){
+    body.innerHTML="";
+    const hint=document.createElement("div"); hint.className="modal-hint";
+    hint.innerHTML="이름을 바꾸면 해당 카테고리의 모든 일정에 반영됩니다. 삭제하면 그 카테고리에 속한 <b>일정도 함께 삭제</b>됩니다.";
+    hint.style.marginTop="0"; body.appendChild(hint);
+    state.cats.forEach((c,i)=>{
+      const row=document.createElement("div"); row.className="cat-row";
+      const n=catCount(c);
+      row.innerHTML=`<input type="text" class="cat-input" value="${esc(c)}">
+        <span class="cat-cnt">${n}건</span>
+        <button class="btn btn-danger cat-del">삭제</button>`;
+      const inp=row.querySelector(".cat-input");
+      const rename=()=>{
+        const nv=inp.value.trim();
+        if(!nv){ inp.value=c; return; }
+        if(nv===c) return;
+        if(state.cats.includes(nv)){ alert("이미 있는 카테고리입니다."); inp.value=c; return; }
+        state.tasks.forEach(t=>{ if(t.cat===c) t.cat=nv; });
+        state.cats[i]=nv;
+        if(ui.filter===c) ui.filter=nv;
+        save(); renderFilters(); renderGantt(); draw();
+      };
+      inp.addEventListener("change",rename);
+      inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); rename(); }});
+      row.querySelector(".cat-del").onclick=()=>{
+        const msg = n>0
+          ? `‘${c}’ 카테고리를 삭제할까요?\n이 카테고리에 속한 일정 ${n}건도 함께 삭제됩니다. (되돌릴 수 없음)`
+          : `‘${c}’ 카테고리를 삭제할까요?`;
+        if(!confirm(msg)) return;
+        if(n>0){ state.tasks=state.tasks.filter(t=>t.cat!==c); }
+        state.cats.splice(i,1);
+        if(ui.filter===c) ui.filter="all";
+        save(); renderFilters(); renderGantt(); draw();
+      };
+      body.appendChild(row);
+    });
+    const addRow=document.createElement("div"); addRow.className="cat-row";
+    addRow.innerHTML=`<input type="text" class="cat-input" id="cat-new" placeholder="새 카테고리 이름">
+      <button class="btn btn-primary cat-add">＋ 추가</button>`;
+    const doAdd=()=>{
+      const nv=addRow.querySelector("#cat-new").value.trim();
+      if(!nv) return;
+      if(state.cats.includes(nv)){ alert("이미 있는 카테고리입니다."); return; }
+      state.cats.push(nv); save(); renderFilters(); renderGantt(); draw();
+    };
+    addRow.querySelector(".cat-add").onclick=doAdd;
+    addRow.querySelector("#cat-new").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); doAdd(); }});
+    body.appendChild(addRow);
+  }
+  draw();
+  const foot=$("#modal-foot"); foot.innerHTML="";
+  const done=document.createElement("button"); done.className="btn btn-primary"; done.textContent="완료"; done.onclick=closeModal;
+  foot.appendChild(done);
+  overlay.classList.add("show");
+}
 
 function msFields(){ return [
   {key:"label",label:"항목명",type:"text"},
