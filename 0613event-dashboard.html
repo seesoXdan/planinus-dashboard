@@ -484,6 +484,10 @@ body:not(.admin) .ms-item{cursor:default}
         <input type="file" id="ai-file" class="file-input" accept=".pdf,.docx,.xlsx,.xls,.csv,.txt,.md">
       </div>
       <div class="modal-hint">PDF · 워드(docx) · 엑셀 · CSV · 텍스트 지원. 한글(HWP)은 PDF로 저장해 올려주세요. (스캔 이미지 PDF는 글자 추출이 안 됩니다)</div>
+      <div class="field" style="margin-top:2px">
+        <button class="btn btn-ghost" id="sheet-dl" style="font-size:12.5px;padding:9px 13px;width:100%">⬇ 운영 통합시트(엑셀) 내려받기 — 현재 내용 그대로</button>
+        <div class="modal-hint" style="margin-top:6px">이 버튼으로 받은 엑셀에서 셀만 고쳐 다시 올리면 그대로 반영됩니다. 바꾸고 싶은 행만 남기고 <b>수정·추가</b> 모드로 올리면 그 항목만 갱신돼요.</div>
+      </div>
       <div class="field"><label>채울 범위</label>
         <select id="ai-scope">
           <option value="all">전체 (행사정보 + 추진일정 + 마일스톤 + 프로그램 + 연락처)</option>
@@ -496,10 +500,12 @@ body:not(.admin) .ms-item{cursor:default}
       </div>
       <div class="field"><label>기존 내용 처리</label>
         <select id="ai-mode">
-          <option value="replace">기존 내용 교체</option>
-          <option value="append">기존에 추가</option>
+          <option value="merge">수정·추가 (같은 이름은 갱신, 새 항목은 추가) · 권장</option>
+          <option value="replace">기존 내용 전체 교체</option>
+          <option value="append">기존에 무조건 추가</option>
         </select>
       </div>
+      <div class="modal-hint" style="margin-top:-2px">특정 항목만 바꾸려면: <b>채울 범위</b>에서 해당 영역을 고르고, <b>수정·추가</b> 모드로 두세요. 그러면 시트(또는 문서)에 적은 항목만 갱신되고 나머지는 그대로 유지됩니다.</div>
       <div id="ai-status" class="modal-hint" style="min-height:18px;margin-bottom:4px"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
         <button class="btn btn-ghost" id="ai-key-btn" style="font-size:12px;padding:8px 12px">🔑 AI 키 설정</button>
@@ -607,6 +613,7 @@ const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 const LS_KEY = "planinus_dashboard_" + DASHBOARD_ID;
 
 let state = clone(DEFAULT_STATE);
+let dataReady = false;   // 실제(저장된) 데이터가 로드되기 전엔 카운트다운 등 표시 보류
 let isAdmin = false;
 let db=null, useFirebase=false;
 const ui = { view:"week", filter:"all" };
@@ -740,7 +747,7 @@ const ST = {
   wait:{cls:"wait",tag:"대기",bar:"b-wait"}, prog:{cls:"prog",tag:"진행중",bar:"b-prog"},
   conf:{cls:"conf",tag:"컨펌요청",bar:"b-conf"}, done:{cls:"done",tag:"완료",bar:"b-done"},
 };
-function renderAll(){ renderEvent(); renderFilters(); renderGantt(); renderMs(); updateProgress(); renderArchive(); renderProgram(); renderContacts(); }
+function renderAll(){ dataReady=true; renderEvent(); renderFilters(); renderGantt(); renderMs(); updateProgress(); renderArchive(); renderProgram(); renderContacts(); tick(); }
 
 function renderEvent(){
   const e=state.event;
@@ -751,7 +758,15 @@ function renderEvent(){
   $("#dday-date").textContent=e.whenText.replace(/\s\d{1,2}:\d{2}$/,"");
 }
 function tick(){
-  const now=new Date(), target=new Date(state.event.datetime);
+  const now=new Date();
+  $("#now-clock").textContent=now.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  // 저장된 실제 데이터가 로드되기 전엔 기본값(예: D-26)을 보여주지 않는다.
+  if(!dataReady){
+    $("#cd-d").textContent="–";$("#cd-h").textContent="–";$("#cd-m").textContent="–";$("#cd-s").textContent="–";
+    $("#dday-sign").textContent="";$("#dday-num").textContent="–";$("#dday-num").style.fontSize="";
+    return;
+  }
+  const target=new Date(state.event.datetime);
   let diff=target-now; const past=diff<0; diff=Math.abs(diff);
   const d=Math.floor(diff/864e5),h=Math.floor(diff%864e5/36e5),m=Math.floor(diff%36e5/6e4),s=Math.floor(diff%6e4/1e3);
   const z=n=>String(n).padStart(2,"0");
@@ -760,7 +775,6 @@ function tick(){
   const numEl=$("#dday-num");
   if(d===0&&!past){numEl.textContent="DAY";numEl.style.fontSize=".55em";}
   else{numEl.textContent=z(d);numEl.style.fontSize="";}
-  $("#now-clock").textContent=now.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
 }
 
 const gantt=$("#gantt");
@@ -903,7 +917,11 @@ function renderContacts(){
 const overlay=$("#modal-overlay");
 function closeModal(){ overlay.classList.remove("show"); }
 $("#modal-close").onclick=closeModal;
-overlay.onclick=e=>{ if(e.target===overlay) closeModal(); };
+// 배경(빈 곳)에서 '눌렀다가 같은 배경에서 뗀' 경우에만 닫는다.
+// (입력칸 안에서 글자를 드래그 선택하다 배경에서 마우스를 떼도 닫히지 않도록)
+let modalDownOnBg=false;
+overlay.addEventListener("mousedown",e=>{ modalDownOnBg=(e.target===overlay); });
+overlay.addEventListener("mouseup",e=>{ if(modalDownOnBg && e.target===overlay) closeModal(); modalDownOnBg=false; });
 
 // type: text|tel|url|date|datetime-local|textarea|select|checkbox|datalist|file|row2
 function openForm(title, fields, values, onSave, onDelete){
@@ -1179,7 +1197,9 @@ function openAI(scope){
 }
 function closeAI(){ aiOverlay.classList.remove("show"); }
 $("#ai-close").onclick=closeAI; $("#ai-cancel").onclick=closeAI;
-aiOverlay.onclick=e=>{ if(e.target===aiOverlay) closeAI(); };
+let aiDownOnBg=false;
+aiOverlay.addEventListener("mousedown",e=>{ aiDownOnBg=(e.target===aiOverlay); });
+aiOverlay.addEventListener("mouseup",e=>{ if(aiDownOnBg && e.target===aiOverlay) closeAI(); aiDownOnBg=false; });
 $("#ai-btn").onclick=()=>openAI("all");
 document.querySelectorAll(".ai-sec").forEach(b=>b.onclick=()=>openAI(b.dataset.ai));
 $("#ai-key-btn").onclick=()=>{
@@ -1256,9 +1276,20 @@ function parseAIJSON(s){
 }
 
 const VALID_ST=["wait","prog","conf","done"];
+// 같은 항목(키가 일치)이면 갱신, 없으면 추가. norm(x)이 빈 값이면 건너뛴다.
+function mergeList(existing, incoming, keyOf){
+  const list=existing.slice();
+  incoming.forEach(item=>{
+    const k=keyOf(item);
+    const i = k ? list.findIndex(x=>keyOf(x)===k) : -1;
+    if(i>=0) list[i]=item; else list.push(item);
+  });
+  return list;
+}
 function applyAI(out, scope, mode){
-  const repl = mode==="replace";
+  const repl = mode==="replace", merge = mode==="merge";
   const wantAll = scope==="all";
+  const norm = s => String(s||"").trim().toLowerCase();
   if((wantAll||scope==="event") && out.event){
     const e=out.event;
     ["name","whenText","place","people","mapUrl","datetime"].forEach(k=>{ if(e[k]) state.event[k]=e[k]; });
@@ -1267,20 +1298,20 @@ function applyAI(out, scope, mode){
   if((wantAll||scope==="tasks") && Array.isArray(out.tasks)){
     const arr=out.tasks.map(t=>({cat:t.cat||"기타", name:t.name||"(무제)", owner:t.owner||"", detail:t.detail||"",
       status:VALID_ST.includes(t.status)?t.status:"wait", start:t.start||state.axis.start, end:t.end||t.start||state.axis.start}));
-    state.tasks = repl? arr : state.tasks.concat(arr);
+    state.tasks = repl? arr : merge? mergeList(state.tasks, arr, t=>norm(t.name)) : state.tasks.concat(arr);
     state.tasks.forEach(t=>addCatIfNew(t.cat));
   }
   if((wantAll||scope==="milestones") && Array.isArray(out.milestones)){
     const arr=out.milestones.map(m=>({label:m.label||"(무제)", due:m.due||"", done:!!m.done}));
-    state.milestones = repl? arr : state.milestones.concat(arr);
+    state.milestones = repl? arr : merge? mergeList(state.milestones, arr, m=>norm(m.label)) : state.milestones.concat(arr);
   }
   if((wantAll||scope==="program") && Array.isArray(out.program)){
     const arr=out.program.map(p=>({time:p.time||"", name:p.name||"(무제)", note:p.note||"", key:!!p.key}));
-    state.program = repl? arr : state.program.concat(arr);
+    state.program = repl? arr : merge? mergeList(state.program, arr, p=>norm(p.name)+"|"+norm(p.time)) : state.program.concat(arr);
   }
   if((wantAll||scope==="contacts") && Array.isArray(out.contacts)){
     const arr=out.contacts.map(c=>({role:c.role||"", name:c.name||"", phone:c.phone||""}));
-    state.contacts = repl? arr : state.contacts.concat(arr);
+    state.contacts = repl? arr : merge? mergeList(state.contacts, arr, c=>norm(c.role)+"|"+norm(c.name)) : state.contacts.concat(arr);
   }
 }
 
@@ -1306,6 +1337,69 @@ $("#ai-run").onclick=async()=>{
     console.error(e);
     st.textContent="오류: "+e.message;
   }finally{ runBtn.disabled=false; }
+};
+
+/* 운영 통합시트(엑셀) 내려받기 — 현재 화면 내용 그대로 */
+function buildOpsSheet(){
+  const wb=XLSX.utils.book_new();
+  const e=state.event, a=state.axis;
+  const guide=[
+    ["운영 통합시트 — 사용 안내"],
+    [""],
+    ["1) 셀 내용을 고친 뒤 저장하고, 대시보드의 ‘✨ AI 자동 채우기’에서 이 파일을 올리세요."],
+    ["2) 일부만 바꾸려면: ‘채울 범위’에서 해당 시트(영역)를 고르고 ‘수정·추가’ 모드로 올리면 됩니다."],
+    ["   - 수정·추가: 이름이 같은 항목은 갱신, 새 이름은 추가, 적지 않은 항목은 그대로 유지"],
+    ["   - 전체 교체: 해당 영역을 시트 내용으로 완전히 덮어씀"],
+    ["3) 날짜는 YYYY-MM-DD 형식. 행사 일시는 YYYY-MM-DDTHH:MM 형식."],
+    ["4) 추진일정 ‘상태’ 칸은 다음 코드 중 하나: wait(대기) / prog(진행중) / conf(컨펌요청) / done(완료)"],
+    ["5) ‘완료’·‘핵심’ 칸은 TRUE 또는 FALSE 로 적어주세요."],
+    ["6) 매칭 기준 — 추진일정: 업무명 / 마일스톤: 항목명 / 프로그램: 순서명+시간 / 연락처: 역할+이름"],
+  ];
+  const sGuide=XLSX.utils.aoa_to_sheet(guide); sGuide["!cols"]=[{wch:90}];
+  XLSX.utils.book_append_sheet(wb,sGuide,"사용안내");
+
+  const ev=[
+    ["항목","값"],
+    ["행사명",e.name||""],
+    ["행사 일시 (YYYY-MM-DDTHH:MM)",e.datetime||""],
+    ["표시용 일시 텍스트",e.whenText||""],
+    ["장소",e.place||""],
+    ["지도 링크",e.mapUrl||""],
+    ["예상 참석 인원",e.people||""],
+    ["준비 시작일 (YYYY-MM-DD)",a.start||""],
+    ["행사일 (YYYY-MM-DD)",a.end||""],
+  ];
+  const sEv=XLSX.utils.aoa_to_sheet(ev); sEv["!cols"]=[{wch:30},{wch:55}];
+  XLSX.utils.book_append_sheet(wb,sEv,"행사정보");
+
+  const tk=[["카테고리","업무명","담당자","세부내용","상태(wait/prog/conf/done)","시작일","종료일"]];
+  state.tasks.forEach(t=>tk.push([t.cat,t.name,t.owner,t.detail,t.status,t.start,t.end]));
+  const sTk=XLSX.utils.aoa_to_sheet(tk); sTk["!cols"]=[{wch:12},{wch:26},{wch:10},{wch:38},{wch:24},{wch:13},{wch:13}];
+  XLSX.utils.book_append_sheet(wb,sTk,"추진일정");
+
+  const ms=[["항목명","기한","완료(TRUE/FALSE)"]];
+  state.milestones.forEach(m=>ms.push([m.label,m.due,m.done?"TRUE":"FALSE"]));
+  const sMs=XLSX.utils.aoa_to_sheet(ms); sMs["!cols"]=[{wch:34},{wch:12},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,sMs,"마일스톤");
+
+  const pg=[["시간","순서명","설명","핵심(TRUE/FALSE)"]];
+  state.program.forEach(p=>pg.push([p.time,p.name,p.note,p.key?"TRUE":"FALSE"]));
+  const sPg=XLSX.utils.aoa_to_sheet(pg); sPg["!cols"]=[{wch:16},{wch:24},{wch:34},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,sPg,"당일프로그램");
+
+  const ct=[["역할","이름","연락처"]];
+  state.contacts.forEach(c=>ct.push([c.role,c.name,c.phone]));
+  const sCt=XLSX.utils.aoa_to_sheet(ct); sCt["!cols"]=[{wch:20},{wch:12},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,sCt,"연락처");
+  return wb;
+}
+const sheetDlBtn=$("#sheet-dl");
+if(sheetDlBtn) sheetDlBtn.onclick=()=>{
+  try{
+    const today=new Date().toISOString().slice(0,10);
+    const safe=(state.event.name||"행사").replace(/[\\/:*?"<>|]/g,"").slice(0,30);
+    XLSX.writeFile(buildOpsSheet(), `운영통합시트_${safe}_${today}.xlsx`);
+  }catch(err){ console.error(err); alert("시트 생성 중 오류: "+err.message); }
 };
 
 /* 보기 토글 */
