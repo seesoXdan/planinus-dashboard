@@ -56,7 +56,8 @@ body{
 .gate-card button:hover{filter:brightness(1.06)}
 .gate-err{font-size:12.5px;color:#ff9d94;margin-top:12px;min-height:18px}
 body:not(.authed) .wrap{display:none}
-body.authed .gate{display:none}
+body.authed .gate,html.sso .gate{display:none}
+html.sso body:not(.ready) .wrap{visibility:hidden}
 
 /* 헤더 */
 .hub-head{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:18px;margin-bottom:30px}
@@ -139,6 +140,7 @@ body.admin .ev-edit{display:inline-flex}
 
 @media(max-width:560px){ body{padding:26px 14px 52px} .list-title{font-size:19px} }
 </style>
+<script>try{if(sessionStorage.getItem("planinus_role")==="admin")document.documentElement.classList.add("sso")}catch(e){}</script>
 </head>
 <body>
 
@@ -242,6 +244,7 @@ function save(){
 }
 function bootstrap(){
   initBackend();
+  if(sessionStorage.getItem("planinus_role")==="admin"){ booted=true; maybeSSO(); return; }
   if(useFirebase){
     $("#gate-enter").disabled=true; $("#gate-enter").textContent="불러오는 중…";
     db.collection("dashboards").doc(HUB_DOC).get()
@@ -276,14 +279,14 @@ function maybeSSO(){   // 허브는 관리자만 자동 입장 (담당자 세션
 }
 $("#gate-enter").onclick=login;
 $("#gate-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") login(); });
-$("#logout-btn").onclick=()=>{ sessionStorage.removeItem("planinus_role"); document.body.classList.remove("authed","admin"); isAdmin=false; setTimeout(()=>$("#gate-pw").focus(),100); };
+$("#logout-btn").onclick=()=>{ sessionStorage.removeItem("planinus_role"); document.documentElement.classList.remove("sso"); document.body.classList.remove("authed","admin"); isAdmin=false; setTimeout(()=>$("#gate-pw").focus(),100); };
 
 /* ===== 렌더 ===== */
 function ddayOf(dt){ const t=new Date(dt); if(isNaN(t)) return null; const diff=Math.ceil((t-new Date())/864e5); return diff; }
 function fmtDate(dt){ const d=new Date(dt); if(isNaN(d)) return dt; const wd=["일","월","화","수","목","금","토"][d.getDay()]; const z=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}.${z(d.getMonth()+1)}.${z(d.getDate())} (${wd}) ${z(d.getHours())}:${z(d.getMinutes())}`; }
 function linkOf(ev){ const q=new URLSearchParams({event:ev.id, n:ev.name||"", d:ev.datetime||"", p:ev.place||""}); return DASHBOARD_FILE+"?"+q.toString(); }
 
-function render(){
+function render(){ document.body.classList.add("ready");
   const grid=$("#grid"); grid.innerHTML="";
   if(!hub.events.length){
     grid.innerHTML=`<div class="empty"><b>아직 등록된 행사가 없습니다.</b>${isAdmin?"우측 상단 ‘＋ 새 행사 추가’로 시작하세요.":"관리자에게 행사 등록을 요청하세요."}</div>`;

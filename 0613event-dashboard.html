@@ -75,7 +75,8 @@ body{
 .gate-card button:hover{filter:brightness(1.06)}
 .gate-err{font-size:12.5px;color:#ff9d94;margin-top:12px;min-height:18px}
 body:not(.authed) .wrap{display:none}
-body.authed .gate{display:none}
+body.authed .gate,html.sso .gate{display:none}
+html.sso body:not(.ready) .wrap{visibility:hidden}
 
 /* ===== 톱바 ===== */
 .topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;margin-bottom:26px}
@@ -168,14 +169,15 @@ body.admin .filt-manage{display:inline-flex;align-items:center;gap:5px}
 .gantt::-webkit-scrollbar{height:8px}.gantt::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
 .gantt-inner{min-width:100%}
 .gantt-axis{display:flex;position:relative;height:24px}
-.axis-spacer{width:var(--label-w);flex:none;position:sticky;left:0;z-index:4;background:var(--surface)}
+.axis-spacer{width:var(--label-w);flex:none;position:sticky;left:0;z-index:4;background:var(--surface);align-self:stretch}
 .axis-track{flex:1;position:relative}
 .axis-tick{position:absolute;top:0;font-size:10.5px;color:var(--ink-3);white-space:nowrap;border-left:1px solid var(--line-2);padding-left:5px;height:24px;line-height:24px}
-.g-row{display:flex;align-items:center;min-height:42px;border-radius:8px;transition:opacity .3s,transform .3s,max-height .35s,margin .35s;overflow:hidden}
+.g-row{display:flex;align-items:center;min-height:42px;border-radius:8px;transition:opacity .3s,transform .3s,max-height .35s,margin .35s;overflow:visible}
 .g-row:hover{background:var(--bg)}.g-row:hover .g-label{background:var(--bg)}
-.g-label{width:var(--label-w);flex:none;padding-right:10px;display:flex;align-items:center;gap:8px;min-width:0;position:sticky;left:0;z-index:3;background:var(--surface);box-shadow:1px 0 0 var(--line-2)}
+.g-label{width:var(--label-w);flex:none;padding-right:10px;cursor:pointer;align-self:stretch;display:flex;align-items:center;gap:8px;min-width:0;position:sticky;left:0;z-index:3;background:var(--surface);box-shadow:1px 0 0 var(--line-2)}
 .g-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
-.g-track{flex:1;position:relative;height:42px}
+.g-track{flex:1;position:relative;height:42px;overflow:hidden}
+.gantt.no-anim .g-bar{animation:none}
 .g-grid{position:absolute;inset:0;pointer-events:none}
 .g-grid i{position:absolute;top:0;bottom:0;width:1px;background:var(--line-2)}
 .g-bar{position:absolute;top:50%;transform:translateY(-50%);height:21px;border-radius:7px;cursor:pointer;display:flex;align-items:center;padding:0 9px;overflow:hidden;transition:filter .15s,box-shadow .15s,transform .15s;animation:grow .8s cubic-bezier(.2,.7,.2,1) backwards}
@@ -262,7 +264,7 @@ body:not(.admin) .ms-item{cursor:default}
 .c-edit{position:absolute;right:10px;top:10px}
 
 /* ===== 모달 ===== */
-.modal-overlay{position:fixed;inset:0;background:rgba(27,26,23,.5);backdrop-filter:blur(3px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .2s}
+.modal-overlay{position:fixed;inset:0;background:rgba(27,26,23,.5);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .2s}
 .modal-overlay.show{display:flex;opacity:1}
 .modal{background:var(--surface);border-radius:var(--radius);box-shadow:0 30px 80px -20px rgba(0,0,0,.45);width:100%;max-width:520px;max-height:88vh;overflow:auto;transform:translateY(12px);transition:transform .2s}
 .modal-overlay.show .modal{transform:none}
@@ -302,6 +304,7 @@ body:not(.admin) .ms-item{cursor:default}
   body{padding:22px 14px 48px}
 }
 </style>
+<script>try{if(sessionStorage.getItem("planinus_role"))document.documentElement.classList.add("sso")}catch(e){}</script>
 </head>
 <body>
 
@@ -698,6 +701,8 @@ let booted=false;
 // 로그인 전, 저장된 비밀번호를 먼저 불러온다(변경된 비번 반영)
 function bootstrap(){
   initBackend();
+  const r=sessionStorage.getItem("planinus_role");
+  if(r==="admin"||r==="staff"){ booted=true; maybeSSO(); return; }
   if(useFirebase){
     $("#gate-enter").disabled=true; $("#gate-enter").textContent="불러오는 중…";
     db.collection("dashboards").doc(DASHBOARD_ID).get()
@@ -734,6 +739,7 @@ $("#gate-enter").onclick=login;
 $("#gate-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") login(); });
 $("#logout-btn").onclick=()=>{
   sessionStorage.removeItem("planinus_role");
+  document.documentElement.classList.remove("sso");
   document.body.classList.remove("authed","admin");
   isAdmin=false;
   setTimeout(()=>$("#gate-pw").focus(),100);
@@ -754,7 +760,7 @@ const ST = {
   wait:{cls:"wait",tag:"대기",bar:"b-wait"}, prog:{cls:"prog",tag:"진행중",bar:"b-prog"},
   conf:{cls:"conf",tag:"컨펌요청",bar:"b-conf"}, done:{cls:"done",tag:"완료",bar:"b-done"},
 };
-function renderAll(){ dataReady=true; renderEvent(); renderFilters(); renderGantt(); renderMs(); updateProgress(); renderArchive(); renderProgram(); renderContacts(); tick(); }
+function renderAll(){ document.body.classList.add("ready"); setTimeout(prepStaffLink,800); dataReady=true; renderEvent(); renderFilters(); renderGantt(); renderMs(); updateProgress(); renderArchive(); renderProgram(); renderContacts(); tick(); }
 
 function renderEvent(){
   const e=state.event;
@@ -785,6 +791,7 @@ function tick(){
 }
 
 const gantt=$("#gantt");
+let ganttAnimated=false;   // 막대 애니메이션은 첫 표시 때만
 function buildTicks(mode){
   const ticks=[], S=axisStart(), E=axisEnd();
   if(mode==="month"){ let d=new Date(S.getFullYear(),S.getMonth(),1); while(d<=E){ticks.push({date:new Date(d),label:`${d.getMonth()+1}월`});d.setMonth(d.getMonth()+1);} }
@@ -816,7 +823,7 @@ function renderGantt(){
       </div>
       <div class="g-track">
         <div class="g-grid">${ticks.map(t=>`<i style="left:${pct(t.date)}%"></i>`).join("")}</div>
-        <div class="g-bar ${st.bar}" style="left:${left}%;width:${width}%;animation-delay:${.15+idx*.04}s"><span class="owner">${esc(task.owner)}</span></div>
+        <div class="g-bar ${st.bar}" style="left:${left}%;width:${width}%;animation-delay:${Math.min(idx*.012,.35)}s"><span class="owner">${esc(task.owner)}</span></div>
       </div>`;
     inner.appendChild(row);
     const bar=row.querySelector(".g-bar"), tip=$("#tooltip");
@@ -833,8 +840,15 @@ function renderGantt(){
     });
     bar.addEventListener("mouseleave",()=>tip.classList.remove("show"));
     if(isAdmin) bar.addEventListener("click",()=>editTask(idx));
+    row.querySelector(".g-name").addEventListener("click",ev=>{
+      if(isAdmin) return editTask(idx);
+      bar.dispatchEvent(new MouseEvent("mouseenter"));
+      const r=ev.target.getBoundingClientRect(); tip.style.left=Math.min(r.left,innerWidth-tip.offsetWidth-10)+"px"; tip.style.top=(r.bottom+6)+"px";
+      clearTimeout(window.__tipT); window.__tipT=setTimeout(()=>tip.classList.remove("show"),3000);
+    });
   });
   gantt.appendChild(inner);
+  if(!ganttAnimated){ ganttAnimated=true; setTimeout(()=>gantt.classList.add("no-anim"),1300); }
 }
 function renderFilters(){
   const wrap=$("#filters"); wrap.innerHTML="";
@@ -1167,14 +1181,38 @@ async function copyText(text){
   }
   return legacyCopy(text);
 }
-$("#copy-link-btn").onclick=async()=>{
-  // 로컬 파일(file://)로 열었어도 항상 웹 주소로, 짧게: https://…/planinus-dashboard/?e=행사코드
+/* 담당자 링크: 웹 주소 → is.gd 단축(실패 시 v.gd → 원래 주소). 한 번 만든 단축 링크는 저장해 재사용 */
+function staffLongUrl(){
   const base=/^https?:$/.test(location.protocol) ? location.href.split("?")[0].split("#")[0].replace(/[^/]*$/,"") : PUBLIC_BASE;
-  const url=base+"?e="+encodeURIComponent(DASHBOARD_ID);
+  return base+"?e="+encodeURIComponent(DASHBOARD_ID);
+}
+function shortenVia(host,url){
+  return new Promise(res=>{
+    const cb="__sh"+Math.random().toString(36).slice(2), s=document.createElement("script");
+    const done=v=>{ clearTimeout(t); delete window[cb]; s.remove(); res(v); };
+    const t=setTimeout(()=>done(""),5000);
+    window[cb]=d=>done(d&&d.shorturl||"");
+    s.onerror=()=>done("");
+    s.src="https://"+host+"/create.php?format=json&callback="+cb+"&url="+encodeURIComponent(url);
+    document.head.appendChild(s);
+  });
+}
+async function getStaffLink(){
+  const long=staffLongUrl();
+  if(state.shortLink && state.shortLink.long===long) return state.shortLink.url;
+  const sh=(await shortenVia("is.gd",long)) || (await shortenVia("v.gd",long));
+  if(sh){ state.shortLink={long,url:sh}; save(); return sh; }
+  return long;
+}
+// 관리자 입장 시 미리 만들어 두기(첫 클릭도 즉시 복사되도록)
+function prepStaffLink(){ if(isAdmin && dataReady && !(state.shortLink && state.shortLink.long===staffLongUrl())) getStaffLink(); }
+$("#copy-link-btn").onclick=async()=>{
   const btn=$("#copy-link-btn"), orig=btn.textContent;
+  btn.textContent="링크 만드는 중…";
+  const url=await getStaffLink();
   const ok=await copyText(url);
-  btn.textContent = ok ? "✓ 링크 복사됨" : "복사 실패 — 다시 시도";
-  setTimeout(()=>btn.textContent=orig, 2600);
+  btn.textContent = ok ? "✓ 복사됨 · "+url.replace(/^https?:\/\//,"") : "복사 실패 — 다시 시도";
+  setTimeout(()=>btn.textContent=orig, 3200);
   if(!ok) prompt("아래 링크를 복사하세요", url);
 };
 
