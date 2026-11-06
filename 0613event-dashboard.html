@@ -237,6 +237,8 @@ body:not(.admin) .ms-item{cursor:default}
 
 /* 자료실 */
 .archive-grid{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:12px}
+.drive-btn{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#fff;background:var(--brand);border-radius:10px;padding:8px 14px;text-decoration:none;white-space:nowrap}
+.arc-gd{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:700;color:#1a73e8;background:#e8f0fe;border-radius:6px;padding:1px 6px}
 .arc{display:flex;align-items:center;gap:13px;padding:16px 15px;border:1px solid var(--line);border-radius:13px;text-decoration:none;color:var(--ink);background:var(--surface);transition:.2s;position:relative;overflow:hidden}
 .arc .arc-go{position:absolute;right:14px;bottom:13px;color:var(--ink-3);font-size:13px;transition:.2s;opacity:0;transform:translate(-3px,3px)}
 .arc:hover{border-color:var(--brand);box-shadow:var(--shadow-sm);transform:translateY(-2px)}
@@ -440,9 +442,13 @@ body:not(.admin) .ms-item{cursor:default}
       <div>
         <span class="eyebrow">Digital Archive</span>
         <div class="sec-title" style="margin:8px 0 2px">원스톱 디지털 자료실</div>
-        <div class="sec-sub">항목별로 최종 파일을 업로드하거나 NAS/드라이브 공유 링크를 연결하세요. 담당자는 클릭해 다운로드합니다.</div>
+        <div class="sec-sub">자료는 Google Drive에 올리고 공유 링크로 연결합니다. 담당자는 클릭하면 Google Drive에서 바로 열립니다.</div>
       </div>
-      <button class="add-btn" id="add-arc">＋ 자료 추가</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+        <a class="drive-btn" id="drive-open" target="_blank" rel="noopener" style="display:none">📁 Google Drive 폴더 열기</a>
+        <button class="add-btn" id="set-drive">📁 드라이브 폴더 연결</button>
+        <button class="add-btn" id="add-arc">＋ 자료 추가</button>
+      </div>
     </div>
     <div class="archive-grid" id="archive"></div>
   </section>
@@ -536,6 +542,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "635273433678",
   appId: "1:635273433678:web:4897b3e915af193b09e91f"
 };
+const PUBLIC_BASE = "https://seesoxdan.github.io/planinus-dashboard/";   // 담당자 링크용 공개 주소
 const params = new URLSearchParams(location.search);
 const DASHBOARD_ID = params.get("event") || "main";   // 행사별 구분 (허브에서 ?event=코드 로 진입)
 
@@ -865,17 +872,29 @@ function updateProgress(){
   clearInterval(window._mc);
   window._mc=setInterval(()=>{ if(v===p){clearInterval(window._mc);return;} v+=step; $("#ms-pct-num").textContent=v; },14);
 }
+/* Google Drive 링크 정리: 공유 링크면 그대로 열기(미리보기·다운로드 모두 Drive 화면에서) */
+const isDrive=u=>/^https:\/\/(drive|docs)\.google\.com\//.test(String(u||""));
+function normDrive(u){ u=String(u||"").trim(); if(!u) return ""; if(!/^https?:\/\//.test(u)) u="https://"+u; return u; }
+function renderDriveBtn(){
+  const a=$("#drive-open"); if(!a) return;
+  if(state.driveUrl){ a.href=state.driveUrl; a.style.display="inline-flex"; } else a.style.display="none";
+  const b=$("#set-drive"); if(b) b.textContent=state.driveUrl?"📁 폴더 링크 변경":"📁 드라이브 폴더 연결";
+}
+$("#set-drive").onclick=()=>openForm("Google Drive 폴더 연결",[
+  {key:"driveUrl",label:"Google Drive 폴더 공유 링크",type:"url",placeholder:"https://drive.google.com/drive/folders/...",hint:"Drive에서 폴더 우클릭 → 공유 → '링크가 있는 모든 사용자' 보기 권한으로 바꾼 뒤 링크를 복사해 붙여넣으세요. 비우고 저장하면 연결이 해제됩니다."},
+], {driveUrl:state.driveUrl||""}, out=>{ state.driveUrl=normDrive(out.driveUrl); save(); renderDriveBtn(); });
 function renderArchive(){
+  renderDriveBtn();
   const arc=$("#archive"); arc.innerHTML="";
   state.archive.forEach((a,i)=>{
     const hasFile=a.file&&a.file.data;
     const el=document.createElement("a"); el.className="arc";
-    if(hasFile){ el.href=a.file.data; el.setAttribute("download", a.file.name); }
-    else if(a.url){ el.href=a.url; el.target="_blank"; el.rel="noopener"; }
+    if(a.url){ el.href=a.url; el.target="_blank"; el.rel="noopener"; }
+    else if(hasFile){ el.href=a.file.data; el.setAttribute("download", a.file.name); }
     else { el.href="#"; el.onclick=ev=>{ if(!isAdmin){ ev.preventDefault(); alert("아직 파일/링크가 등록되지 않았습니다."); } }; }
-    const fileLine = hasFile
-      ? `<div class="arc-file">📎 ${esc(a.file.name)}<span class="arc-badge">최종본</span></div>`
-      : (a.url? `<div class="arc-file">🔗 공유 링크 연결됨</div>` : `<div class="arc-s">미등록</div>`);
+    const fileLine = a.url
+      ? (isDrive(a.url)? `<div class="arc-file">🔗 Google Drive<span class="arc-gd">열기</span></div>` : `<div class="arc-file">🔗 공유 링크 연결됨</div>`)
+      : (hasFile? `<div class="arc-file">📎 ${esc(a.file.name)}<span class="arc-badge">최종본</span></div>` : `<div class="arc-s">미등록</div>`);
     el.innerHTML=`
       <div class="arc-ic">${esc(a.icon)}</div>
       <div style="min-width:0"><div class="arc-t">${esc(a.title)}</div><div class="arc-s">${esc(a.sub)}</div>${fileLine}</div>
@@ -1099,13 +1118,13 @@ function arcFields(){ return [
   {key:"icon",label:"아이콘 (이모지)",type:"text",placeholder:"📄"},
   {key:"title",label:"자료명",type:"text"},
   {key:"sub",label:"부가 설명",type:"text",placeholder:"운영 기획안 v3"},
-  {key:"file",label:"첨부파일 업로드 (최종본)",type:"file",hint:"파일을 올리면 다운로드가 이 파일로 교체됩니다. 새로 올리면 최종본으로 갱신돼요."},
-  {key:"url",label:"또는 공유 링크 (NAS/드라이브)",type:"url",placeholder:"https://...",hint:"대용량 파일은 업로드 대신 링크를 권장합니다."},
+  {key:"url",label:"Google Drive 공유 링크",type:"url",placeholder:"https://drive.google.com/file/d/...",hint:"Drive에서 파일 우클릭 → 공유 → '링크가 있는 모든 사용자'로 바꾼 뒤 링크 복사. 최종본이 바뀌면 Drive에서 '버전 관리 → 새 버전 업로드'를 하면 링크가 그대로 유지됩니다."},
+  {key:"file",label:"(보조) 소용량 파일 직접 업로드",type:"file",hint:"Drive 링크가 있으면 링크가 우선 열립니다. 0.7MB 이하만 가능."},
 ];}
 $("#add-arc").onclick=()=>openForm("자료 추가",arcFields(),{icon:"📄"},
-  out=>{ if(out.file===undefined) out.file=null; state.archive.push(out); save(); renderArchive(); });
+  out=>{ if(out.file===undefined) out.file=null; out.url=normDrive(out.url); state.archive.push(out); save(); renderArchive(); });
 function editArchive(i){ openForm("자료 수정 / 파일 교체",arcFields(),state.archive[i],
-  out=>{ if(out.file===undefined) out.file=state.archive[i].file||null; state.archive[i]=out; save(); renderArchive(); },
+  out=>{ if(out.file===undefined) out.file=state.archive[i].file||null; out.url=normDrive(out.url); state.archive[i]=out; save(); renderArchive(); },
   ()=>{ state.archive.splice(i,1); save(); renderArchive(); }); }
 
 function progFields(){ return [
@@ -1149,8 +1168,9 @@ async function copyText(text){
   return legacyCopy(text);
 }
 $("#copy-link-btn").onclick=async()=>{
-  const base=location.href.split("?")[0].split("#")[0];
-  const url=base+"?event="+encodeURIComponent(DASHBOARD_ID);
+  // 로컬 파일(file://)로 열었어도 항상 웹 주소로, 짧게: https://…/planinus-dashboard/?e=행사코드
+  const base=/^https?:$/.test(location.protocol) ? location.href.split("?")[0].split("#")[0].replace(/[^/]*$/,"") : PUBLIC_BASE;
+  const url=base+"?e="+encodeURIComponent(DASHBOARD_ID);
   const btn=$("#copy-link-btn"), orig=btn.textContent;
   const ok=await copyText(url);
   btn.textContent = ok ? "✓ 링크 복사됨" : "복사 실패 — 다시 시도";
