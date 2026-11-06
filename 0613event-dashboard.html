@@ -1186,26 +1186,50 @@ function staffLongUrl(){
   const base=/^https?:$/.test(location.protocol) ? location.href.split("?")[0].split("#")[0].replace(/[^/]*$/,"") : PUBLIC_BASE;
   return base+"?e="+encodeURIComponent(DASHBOARD_ID);
 }
-function shortenVia(host,url){
+// 행사명 영문으로 링크 꼬리 만들기: "TECH-BIZ EWHA 2026" → TECHBIZ_EWHA_2026 (is.gd 규칙: 영문·숫자·_ 5~30자)
+function titleSlug(){
+  const n=String(state.event&&state.event.name||"").replace(/[-·.]/g,"").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_+|_+$/g,"").toUpperCase().slice(0,30).replace(/_+$/,"");
+  return n.length>=5 ? n : "";
+}
+function shortenVia(host,url,slug){
   return new Promise(res=>{
     const cb="__sh"+Math.random().toString(36).slice(2), s=document.createElement("script");
     const done=v=>{ clearTimeout(t); delete window[cb]; s.remove(); res(v); };
     const t=setTimeout(()=>done(""),5000);
     window[cb]=d=>done(d&&d.shorturl||"");
     s.onerror=()=>done("");
-    s.src="https://"+host+"/create.php?format=json&callback="+cb+"&url="+encodeURIComponent(url);
+    s.src="https://"+host+"/create.php?format=json&callback="+cb+(slug?"&shorturl="+encodeURIComponent(slug):"")+"&url="+encodeURIComponent(url);
+    document.head.appendChild(s);
+  });
+}
+// 이미 있는 is.gd 이름이 어디로 가는지 조회 (우리 행사로 가면 그대로 재사용)
+function lookupIsgd(slug){
+  return new Promise(res=>{
+    const cb="__lk"+Math.random().toString(36).slice(2), s=document.createElement("script");
+    const done=v=>{ clearTimeout(t); delete window[cb]; s.remove(); res(v); };
+    const t=setTimeout(()=>done(""),5000);
+    window[cb]=d=>done(d&&d.url||"");
+    s.onerror=()=>done("");
+    s.src="https://is.gd/forward.php?format=json&callback="+cb+"&shorturl="+encodeURIComponent(slug);
     document.head.appendChild(s);
   });
 }
 async function getStaffLink(){
   const long=staffLongUrl();
-  if(state.shortLink && state.shortLink.long===long) return state.shortLink.url;
-  const sh=(await shortenVia("is.gd",long)) || (await shortenVia("v.gd",long));
-  if(sh){ state.shortLink={long,url:sh}; save(); return sh; }
+  const slug=titleSlug();
+  if(state.shortLink && state.shortLink.long===long && state.shortLink.slug===slug) return state.shortLink.url;
+  let sh="";
+  if(slug){   // 영문 행사명 링크 우선 (이미 다른 곳에서 쓰는 이름이면 뒤에 숫자 붙여 재시도)
+    sh=await shortenVia("is.gd",long,slug);
+    if(!sh && (await lookupIsgd(slug))===long) sh="https://is.gd/"+slug;
+    if(!sh) sh=await shortenVia("is.gd",long,(slug.slice(0,27)+"_"+Math.floor(Math.random()*90+10)));
+  }
+  if(!sh) sh=(await shortenVia("is.gd",long)) || (await shortenVia("v.gd",long));
+  if(sh){ state.shortLink={long,slug,url:sh}; save(); return sh; }
   return long;
 }
 // 관리자 입장 시 미리 만들어 두기(첫 클릭도 즉시 복사되도록)
-function prepStaffLink(){ if(isAdmin && dataReady && !(state.shortLink && state.shortLink.long===staffLongUrl())) getStaffLink(); }
+function prepStaffLink(){ if(isAdmin && dataReady && !(state.shortLink && state.shortLink.long===staffLongUrl() && state.shortLink.slug===titleSlug())) getStaffLink(); }
 $("#copy-link-btn").onclick=async()=>{
   const btn=$("#copy-link-btn"), orig=btn.textContent;
   btn.textContent="링크 만드는 중…";
