@@ -294,14 +294,27 @@ body:not(.admin) .ms-item{cursor:default}
 .btn-ghost{background:var(--surface);border-color:var(--line);color:var(--ink-2)}.btn-ghost:hover{background:var(--bg)}
 .btn-danger{background:#fff;border-color:#e7c9c5;color:#c0463c}.btn-danger:hover{background:#fbeceb}
 /* 진행 현황 */
-.ov-stats{background:var(--ink);color:#F4F2ED;border-radius:14px;padding:18px 22px 16px;margin-bottom:20px}
-.ov-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.ov-n{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
-.ov-l{font-size:12.5px;color:#bcb9af;margin-top:4px}
-.ov-done{color:#7cc7b4}.ov-prog{color:#6ea3ec}.ov-chk{color:#f0a64a}
-.ov-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden;margin:16px 0 8px}
-.ov-bar i{display:block;height:100%;background:#7cc7b4;border-radius:99px;transition:width .6s}
-.ov-foot{display:flex;justify-content:space-between;font-size:12.5px;color:#bcb9af}.ov-foot b{color:#7cc7b4;font-weight:600}
+.ov-head{margin-bottom:14px}
+.ov-asof{font-size:12px;font-weight:500;color:var(--ink-3);margin-left:4px}
+.ov-stats{background:var(--bg);border:1px solid var(--line-2);border-radius:14px;padding:10px 12px 14px;margin-bottom:20px}
+.ov-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.ov-grid{gap:8px}
+.ov-c{all:unset;box-sizing:border-box;cursor:pointer;padding:10px 14px;border-radius:11px;border:1px solid transparent;transition:background .15s,border-color .15s}
+.ov-c:hover{background:var(--surface)}
+.ov-c.on{background:var(--surface);border-color:var(--line)}
+.ov-c[data-stat="all"].on{background:transparent;border-color:transparent}
+.ov-c:focus-visible{outline:2px solid var(--brand)}
+.stat-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--ink-2);background:var(--brand-soft);border-radius:10px;padding:8px 12px;margin-top:10px}
+.stat-banner:empty{display:none}
+.stat-banner b{color:var(--brand)}
+.stat-banner button{font-family:var(--font);font-size:12px;font-weight:600;color:var(--brand);background:var(--surface);border:1px solid #bfe0db;border-radius:8px;padding:4px 10px;cursor:pointer}
+.ov-n{font-family:var(--serif);font-size:34px;line-height:1;letter-spacing:-.02em;color:var(--ink)}
+.ov-l{font-size:12px;font-weight:600;color:var(--ink-3);margin-top:7px;display:flex;align-items:center;gap:6px}
+.ov-l i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.ov-done{color:var(--brand)}.ov-prog{color:#2563B0}.ov-chk{color:var(--st-conf)}
+.ov-bar{height:7px;border-radius:99px;background:var(--bg-2);overflow:hidden;margin:12px 14px 8px}
+.ov-bar i{display:block;height:100%;background:linear-gradient(90deg,#0F6E64,#1d8e7e);border-radius:99px;transition:width .6s}
+.ov-foot{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-3);padding:0 14px}.ov-foot b{color:var(--brand);font-weight:700}
 .ms-head2{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .ms-count{font-size:12px;font-weight:500;color:var(--ink-3);margin-left:4px}
 .ms-pct-mini{font-size:12px;font-weight:600;color:var(--brand)}
@@ -311,7 +324,7 @@ body:not(.admin) .ms-item{cursor:default}
 .milestone .ms-box{width:17px;height:17px;border-radius:5px}
 .milestone .ms-name{font-size:12.5px;line-height:1.35}
 .milestone .ms-due{font-size:10.5px;margin-top:1px}
-@media(max-width:560px){ .ov-grid{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:14px} .ov-stats{padding:16px} }
+@media(max-width:560px){ .ov-grid{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:16px} .ov-stats{padding:16px} .ov-n{font-size:28px} }
 /* 목록 행: 상태 + 날짜 */
 .li-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;white-space:nowrap}
 .st-pill{font-size:11px;font-weight:700;border-radius:999px;padding:3px 10px}
@@ -380,8 +393,16 @@ body:not(.tl-list) #list-view{display:none}
 .tp-sub{font-size:12.5px;font-weight:700;margin:4px 0 8px}.tp-sub span{font-weight:500;color:var(--ink-3);margin-left:4px}
 .tp-empty{font-size:12.5px;color:var(--ink-3);padding:10px 0 12px}
 .fb-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
-.fb-item{border:1px solid var(--line);border-radius:11px;padding:10px 12px;background:var(--surface)}
-.fb-item.is-done{opacity:.6}
+.fb-item{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);border-radius:11px;padding:11px 13px;background:var(--surface)}
+.fb-main{flex:1;min-width:0}
+.fb-item.is-done{background:var(--bg)}
+.fb-item.is-done .fb-body{color:var(--ink-3);text-decoration:line-through}
+.fb-chk{width:22px;height:22px;flex:none;margin-top:1px;border:1.8px solid var(--ink-3);border-radius:7px;background:var(--surface);display:grid;place-items:center;cursor:pointer;padding:0;transition:.15s}
+.fb-chk svg{width:13px;height:13px;stroke:#fff;stroke-width:3;fill:none;opacity:0}
+.fb-chk:hover{border-color:var(--brand)}
+.fb-chk.on{background:var(--brand);border-color:var(--brand)}.fb-chk.on svg{opacity:1}
+.fb-chk-sp{width:22px;flex:none}
+.fb-closed{color:var(--brand);font-weight:600}
 .fb-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:11.5px}
 .fb-kind-tag{font-size:10px;font-weight:700;border-radius:6px;padding:2px 7px}
 .k-req{color:#1a5fb4;background:#e6effb}.k-chk{color:#8a5d00;background:#fdf0cf}.k-reply{color:var(--brand);background:var(--brand-soft)}
@@ -484,6 +505,11 @@ body:not(.tl-list) #list-view{display:none}
 
   <!-- ② 진행 현황 + 클라이언트 컨펌 체크리스트 -->
   <section class="card card-pad anim full-row milestone" style="animation-delay:.16s" id="ov-sec">
+    <div class="ov-head">
+      <span class="eyebrow">Progress Overview</span>
+      <div class="sec-title" style="margin:8px 0 2px">진행 현황 <span class="ov-asof" id="ov-asof"></span></div>
+      <div class="sec-sub">추진 일정 전체 업무 기준입니다. 숫자를 누르면 해당 업무만 보입니다. 「확인 요청」은 주최측 회신·완료 보고·미처리 요청이 걸린 업무입니다.</div>
+    </div>
     <div class="ov-stats" id="ov-stats"></div>
     <div class="ms-head2">
       <div>
@@ -520,6 +546,7 @@ body:not(.tl-list) #list-view{display:none}
       </div>
     </div>
     <div class="filters" id="cat-chips"></div>
+    <div class="stat-banner" id="stat-banner"></div>
     <div id="list-view" class="list-view"></div>
     <div id="gantt-tools" class="gantt-tools">
       <div class="gt-row">
@@ -755,7 +782,7 @@ let state = clone(DEFAULT_STATE);
 let dataReady = false;   // 실제(저장된) 데이터가 로드되기 전엔 카운트다운 등 표시 보류
 let isAdmin = false;
 let db=null, useFirebase=false;
-const ui = { view:"week", filter:"all", quick:"all", owner:"all", fbAll:false, mode:"", search:"", sheet:false };
+const ui = { view:"week", filter:"all", quick:"all", owner:"all", fbAll:false, mode:"", search:"", sheet:false, stat:"all" };
 
 function initBackend(){
   const ok = FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith("YOUR_") && window.firebase;
@@ -1427,6 +1454,7 @@ function quickMatch(t,q){
 function taskVisible(t){
   if(ui.filter!=="all" && t.cat!==ui.filter) return false;
   if(ui.owner!=="all" && (t.owner||"")!==ui.owner) return false;
+  if(!statMatch(t)) return false;
   if(ui.search){ const q=ui.search.toLowerCase(); if(![t.name,t.owner,t.cat,t.detail].some(v=>String(v||"").toLowerCase().includes(q))) return false; }
   return quickMatch(t, ui.quick);
 }
@@ -1504,14 +1532,15 @@ function fbItemHtml(c,showTask){
   const taskLink=showTask ? (ti>=0?`<button class="fb-task" data-open-task="${ti}">${esc(state.tasks[ti].name)}</button>`:`<span class="fb-task fb-gen">${c.t?"삭제된 일정":"일반"}</span>`) : "";
   const closable=c.kind!=="reply";
   return `<div class="fb-item${c.done&&closable?" is-done":""}">
+    ${closable?`<button class="fb-chk${c.done?" on":""}" data-fb-done="${c.id}" title="${c.done?"완료 취소":"완료로 체크"}" aria-label="완료 체크"><svg viewBox="0 0 24 24"><polyline points="5 12 10 17 19 7"/></svg></button>`:`<span class="fb-chk-sp"></span>`}
+    <div class="fb-main">
     <div class="fb-top"><span class="fb-kind-tag ${k.cls}">${k.t}</span>${taskLink}<span class="fb-by">${esc(c.by)}</span><span class="fb-at">${fmtAt(c.at)}</span></div>
     <div class="fb-body">${esc(c.text).replace(/\n/g,"<br>")}</div>
     <div class="fb-acts">
-      ${closable?(c.done?`<span class="fb-state">처리완료</span>`:`<span class="fb-state fb-open">미처리</span>`):""}
+      ${closable?(c.done?`<span class="fb-state fb-closed">✓ 완료${c.doneBy?` · ${esc(c.doneBy)} ${fmtAt(c.doneAt)}`:""}</span>`:`<span class="fb-state fb-open">미처리</span>`):""}
       ${!showTask?`<button class="fb-btn" data-fb-reply="${c.id}">회신</button>`:""}
-      ${isAdmin&&closable?`<button class="fb-btn" data-fb-done="${c.id}">${c.done?"다시 열기":"처리완료"}</button>`:""}
       ${isAdmin?`<button class="fb-btn fb-del" data-fb-del="${c.id}">삭제</button>`:""}
-    </div></div>`;
+    </div></div></div>`;
 }
 function fbFormHtml(kind){
   return `<div class="fb-form">
@@ -1520,7 +1549,12 @@ function fbFormHtml(kind){
     <button class="btn btn-primary fb-send">등록</button></div>`;
 }
 function bindFbItems(root, after, onReply){
-  root.querySelectorAll("[data-fb-done]").forEach(b=>b.onclick=async()=>{ const id=b.dataset.fbDone; await patchFb({["fb.c."+id+".done"]:!fb().c[id].done}); after(); });
+  root.querySelectorAll("[data-fb-done]").forEach(b=>b.onclick=async()=>{
+    const id=b.dataset.fbDone, now=!fb().c[id].done;
+    if(now){ const n=myName(); if(!n) return; await patchFb({["fb.c."+id+".done"]:true,["fb.c."+id+".doneBy"]:n,["fb.c."+id+".doneAt"]:Date.now()}); }
+    else await patchFb({["fb.c."+id+".done"]:false,["fb.c."+id+".doneBy"]:null,["fb.c."+id+".doneAt"]:null});
+    after();
+  });
   root.querySelectorAll("[data-fb-del]").forEach(b=>b.onclick=async()=>{ if(!confirm("이 글을 삭제할까요?")) return; await patchFb({["fb.c."+b.dataset.fbDel]:null}); after(); });
   root.querySelectorAll("[data-fb-reply]").forEach(b=>b.onclick=()=>onReply&&onReply(b.dataset.fbReply));
   root.querySelectorAll("[data-open-task]").forEach(b=>b.onclick=()=>openTaskPanel(+b.dataset.openTask));
@@ -1583,21 +1617,43 @@ function dueTag(t,g){
   if(g==="done") return `<span class="li-due">완료</span>`;
   return `<span class="li-due">${fmtMD(t.start)}–${fmtMD(t.end)}</span>`;
 }
+const STAT_LABEL={done:"완료",week:"이번 주",check:"확인 요청"};
+function statMatch(t){
+  if(ui.stat==="done") return t.status==="done";
+  if(ui.stat==="week") return quickMatch(t,"week");
+  if(ui.stat==="check") return t.status!=="done" && needsCheck(t);
+  return true;
+}
+function setStat(k){
+  ui.stat = (k==="all"||ui.stat===k) ? "all" : k;
+  renderOverview(); renderFilters(); renderGantt(); renderList();
+  if(ui.stat!=="all"){ const sec=$("#gantt").closest("section"); if(sec) sec.scrollIntoView({behavior:"smooth",block:"start"}); }
+}
+function renderStatBanner(){
+  const el=$("#stat-banner"); if(!el) return;
+  if(ui.stat==="all"){ el.innerHTML=""; return; }
+  const n=state.tasks.filter(t=>statMatch(t)&&(ui.filter==="all"||t.cat===ui.filter)).length;
+  el.innerHTML=`<span>「${STAT_LABEL[ui.stat]}」 업무만 보는 중 · <b>${n}건</b></span><button id="stat-clear">전체 보기 ✕</button>`;
+  $("#stat-clear").onclick=()=>setStat("all");
+}
 function ownerLabel(o){ o=String(o||""); return o.includes("/") ? "공동" : (o||"-"); }
 function mdDot(iso){ const d=D(iso); return (d.getMonth()+1)+". "+d.getDate(); }
 function renderOverview(){
   const box=$("#ov-stats"); if(!box) return;
-  const T=state.tasks, n=T.length, done=T.filter(t=>t.status==="done").length, prog=T.filter(t=>t.status==="prog").length;
+  const T=state.tasks, n=T.length, done=T.filter(t=>t.status==="done").length, week=T.filter(t=>quickMatch(t,"week")).length;
   const chk=T.filter(t=>t.status!=="done" && needsCheck(t)).length, late=T.filter(t=>t.status!=="done" && t.end<todayStr()).length;
   const pct=n?Math.round(done/n*100):0;
+  const asof=$("#ov-asof"); if(asof){ const d=new Date(); asof.textContent=`${d.getMonth()+1}/${d.getDate()} 기준`; }
   box.innerHTML=`<div class="ov-grid">
-    <div><div class="ov-n">${n}</div><div class="ov-l">전체 업무</div></div>
-    <div><div class="ov-n ov-done">${done}</div><div class="ov-l">완료</div></div>
-    <div><div class="ov-n ov-prog">${prog}</div><div class="ov-l">진행 중</div></div>
-    <div><div class="ov-n ov-chk">${chk}</div><div class="ov-l">확인 요청</div></div>
+    <button class="ov-c${ui.stat==="all"?" on":""}" data-stat="all"><div class="ov-n">${n}</div><div class="ov-l">전체 업무</div></button>
+    <button class="ov-c${ui.stat==="done"?" on":""}" data-stat="done"><div class="ov-n ov-done">${done}</div><div class="ov-l"><i style="background:var(--brand)"></i>완료</div></button>
+    <button class="ov-c${ui.stat==="week"?" on":""}" data-stat="week"><div class="ov-n ov-prog">${week}</div><div class="ov-l"><i style="background:#2563B0"></i>이번 주</div></button>
+    <button class="ov-c${ui.stat==="check"?" on":""}" data-stat="check"><div class="ov-n ov-chk">${chk}</div><div class="ov-l"><i style="background:var(--st-conf)"></i>확인 요청</div></button>
   </div>
   <div class="ov-bar"><i style="width:${pct}%"></i></div>
-  <div class="ov-foot"><span>전체 진행률${late?` · <span style="color:#ff9d94">지연 ${late}건</span>`:""}</span><b>${pct}%</b></div>`;
+  <div class="ov-foot"><span>전체 진행률${late?` · <span style="color:#c0463c;font-weight:700">지연 ${late}건</span>`:""}</span><b>${pct}%</b></div>`;
+  box.querySelectorAll("[data-stat]").forEach(x=>x.onclick=()=>setStat(x.dataset.stat));
+  renderStatBanner();
 }
 function renderList(){
   renderOverview();
@@ -1611,7 +1667,7 @@ function renderList(){
     {k:"done", t:"완료", ic:"✓"},
   ];
   const by={late:[],week:[],next:[],later:[],done:[]};
-  state.tasks.forEach((t,i)=>{ if(ui.filter==="all"||t.cat===ui.filter) by[groupOf(t)].push(i); });
+  state.tasks.forEach((t,i)=>{ if((ui.filter==="all"||t.cat===ui.filter) && statMatch(t)) by[groupOf(t)].push(i); });
   const sortKey={late:"end",week:"end",next:"start",later:"start",done:"end"};
   Object.keys(by).forEach(k=>by[k].sort((a,b)=>String(state.tasks[a][sortKey[k]]).localeCompare(String(state.tasks[b][sortKey[k]]))));
   ui.open=ui.open||{late:true,week:true,next:false,later:false,done:false};
@@ -1619,11 +1675,12 @@ function renderList(){
   let html="";
   G.forEach(g=>{
     const ids=by[g.k], n=ids.length;
+    if(ui.stat!=="all" && !n) return;
     if(g.k==="late" && !n){ html+=`<div class="lg-head lg-none">지연 없음</div>`; return; }
-    const open=ui.open[g.k];
+    const open=ui.stat!=="all" ? true : ui.open[g.k];
     html+=`<button class="lg-head lg-${g.k}" data-lg="${g.k}"><span class="lg-car">${open?"▾":"▸"}</span>${g.t}<span class="lg-n">${n}건</span></button>`;
     if(!open || !n) return;
-    const LIM=5, shown=ui.more[g.k]?ids:ids.slice(0,LIM);
+    const LIM=ui.stat!=="all"?Infinity:5, shown=ui.more[g.k]?ids:ids.slice(0,LIM);
     html+=`<div class="lg-items">`+shown.map(i=>{
       const t=state.tasks[i], rep=t.id&&fb().r[t.id], c=t.id?openCount(t.id):0;
       const chk=t.status!=="done" && needsCheck(t);
@@ -1638,6 +1695,7 @@ function renderList(){
     }).join("")+`</div>`;
     if(n>LIM) html+=`<button class="lg-more" data-more="${g.k}">${ui.more[g.k]?"접기":`${n-LIM}건 더 보기`}</button>`;
   });
+  if(!html) html=`<div class="tp-empty" style="padding:18px 4px">해당하는 업무가 없습니다.</div>`;
   box.innerHTML=html;
   box.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>{ ui.open[b.dataset.lg]=!ui.open[b.dataset.lg]; renderList(); });
   box.querySelectorAll("[data-more]").forEach(b=>b.onclick=()=>{ ui.more[b.dataset.more]=!ui.more[b.dataset.more]; renderList(); });
