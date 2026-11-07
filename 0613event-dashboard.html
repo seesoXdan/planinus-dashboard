@@ -222,7 +222,30 @@ body:not(.admin) .ms-item{cursor:default}
 
 /* 당일 프로그램 */
 .prog{margin-top:16px;position:relative;padding-left:6px}
-.prog-item{display:grid;grid-template-columns:96px 22px 1fr;gap:8px;align-items:flex-start;padding:7px 0;position:relative}
+.prog-day{font-size:13px;font-weight:700;color:var(--brand);margin:14px 0 4px;padding-bottom:6px;border-bottom:1px solid var(--line-2)}
+.prog-day:first-child{margin-top:0}
+.prog-item.ptl-visit .prog-node{border-color:#C0603F}
+.prog-item.ptl-move .prog-body{background:var(--surface)}
+.prog-item.ptl-move .prog-name{font-weight:500;color:var(--ink-2)}
+.pg-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-bottom:12px}
+.pg-legend span{display:inline-flex;align-items:center;gap:6px}
+.pg-legend i{width:14px;height:14px;border-radius:4px;display:inline-block;border:1px solid var(--line)}
+.pg-scroll{overflow-x:auto;scrollbar-width:thin;padding-bottom:4px}
+.pg{display:grid;gap:4px;min-width:720px}
+.pg-h{font-size:12.5px;color:var(--ink-2);text-align:center;padding:4px 0 8px}.pg-h b{font-weight:700;color:var(--ink)}
+.pg-t{display:flex;flex-direction:column;justify-content:center;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-3);padding-right:6px;text-align:right}
+.pg-t b{color:var(--ink);font-weight:700}
+.pg-c{all:unset;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;border-radius:8px;padding:8px 8px;font-size:12.5px;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere;border:1px solid transparent}
+body.admin .pg-c{cursor:pointer}
+body.admin .pg-c:hover{filter:brightness(.97);outline:2px solid var(--brand);outline-offset:-2px}
+.pg-n{font-weight:600}.pg-s{font-size:11px;opacity:.8}
+.pt-lec{background:#E6EEF2;color:#24323a}
+.pt-visit{background:#C0603F;color:#fff}
+.pt-event{background:var(--ink);color:#F4F2ED}
+.pt-move{background:var(--surface);color:var(--ink-3);border-color:var(--line)}
+.pt-move .pg-n{font-weight:500}
+.pg-legend i.pt-lec{background:#E6EEF2}.pg-legend i.pt-visit{background:#C0603F;border-color:#C0603F}.pg-legend i.pt-event{background:var(--ink);border-color:var(--ink)}.pg-legend i.pt-move{background:var(--surface)}
+.prog-item{display:grid;grid-template-columns:100px 22px 1fr;gap:8px;align-items:flex-start;padding:7px 0;position:relative}
 .prog-time{font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:600;color:var(--ink-2);text-align:right;padding-top:9px;white-space:nowrap}
 .prog-rail{display:flex;flex-direction:column;align-items:center;align-self:stretch}
 .prog-node{width:13px;height:13px;border-radius:50%;background:var(--surface);border:2.5px solid var(--brand);margin-top:9px;flex:none;z-index:1}
@@ -582,10 +605,11 @@ body:not(.tl-list) #list-view{display:none}
       <div class="sec-head">
         <div>
           <span class="eyebrow">Program Grid</span>
-          <div class="sec-title" style="margin:8px 0 2px">행사 당일 프로그램 타임라인</div>
-          <div class="sec-sub">등록부터 클로징까지, 당일 운영 흐름을 한눈에.</div>
+          <div class="sec-title" style="margin:8px 0 2px">행사 프로그램</div>
+          <div class="sec-sub">타임라인 또는 표로 볼 수 있습니다.</div>
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+          <div class="view-seg" id="prog-seg"><button data-pv="timeline">타임라인</button><button data-pv="grid">표</button></div>
           <button class="add-btn ai-sec" data-ai="program">✨ AI</button>
           <button class="add-btn" id="add-prog">＋ 순서 추가</button>
         </div>
@@ -1084,18 +1108,6 @@ function renderArchive(){
     arc.appendChild(el);
   });
 }
-function renderProgram(){
-  const prog=$("#program"); prog.innerHTML="";
-  state.program.forEach((p,i)=>{
-    const el=document.createElement("div"); el.className="prog-item"+(p.key?" prog-key":"");
-    el.innerHTML=`
-      <div class="prog-time">${esc(p.time)}</div>
-      <div class="prog-rail"><div class="prog-node"></div><div class="prog-line"></div></div>
-      <div class="prog-body"><div class="prog-txt"><div class="prog-name">${esc(p.name)}</div><div class="prog-note">${esc(p.note)}</div></div><button class="edit-btn" data-edit-prog="${i}" title="수정">✎</button></div>`;
-    el.querySelector(".edit-btn").onclick=()=>editProgram(i);
-    prog.appendChild(el);
-  });
-}
 function renderContacts(){
   const wrap=$("#contacts"); wrap.innerHTML="";
   state.contacts.forEach((c,i)=>{
@@ -1308,9 +1320,10 @@ function editArchive(i){ openForm("자료 수정 / 파일 교체",arcFields(),st
   ()=>{ state.archive.splice(i,1); save(); renderArchive(); }); }
 
 function progFields(){ return [
-  {key:"time",label:"시간",type:"text",placeholder:"10:00–10:30"},
+  {key:"time",label:"시간",type:"text",placeholder:"10:00–10:30  (여러 날: 12/14(월) 10:00–12:00)"},
   {key:"name",label:"순서명",type:"text"},
   {key:"note",label:"설명",type:"text"},
+  {key:"type",label:"구분",type:"select",options:[{v:"",t:"자동"},{v:"lecture",t:"강의"},{v:"visit",t:"기관·기업 방문"},{v:"event",t:"식사·행사"},{v:"move",t:"이동·오찬"}]},
   {key:"key",label:"강조 표시 (핵심 순서)",type:"checkbox"},
 ];}
 $("#add-prog").onclick=()=>openForm("프로그램 순서 추가",progFields(),{key:false},
@@ -1797,6 +1810,82 @@ function renderFilters(){
 function renderFilters2(){ renderFilters(); }
 $("#g-filter-btn").onclick=()=>{ ui.sheet=!ui.sheet; renderFilters(); };
 $("#g-search").addEventListener("input",e=>{ ui.search=e.target.value.trim(); clearTimeout(window.__gs); window.__gs=setTimeout(()=>{ renderFilters(); renderGantt(); },150); });
+
+/* 프로그램: 타임라인 / 표 보기 (여러 날 행사 지원) */
+const PROG_LS="planinus_prog_view";
+const PTYPE={lecture:{t:"강의",c:"pt-lec"},visit:{t:"기관·기업 방문",c:"pt-visit"},event:{t:"식사·행사",c:"pt-event"},move:{t:"이동·오찬",c:"pt-move"}};
+function progType(p){
+  if(p.type && PTYPE[p.type]) return p.type;
+  const s=(p.name||"")+" "+(p.note||"");
+  if(/오찬|중식|점심|이동|휴식|break/i.test(p.name||"")) return "move";
+  if(/방문|견학|투어/.test(s)) return "visit";
+  if(p.key || /만찬|디너|개회|폐회|개막|폐막|리셉션|네트워킹/.test(p.name||"")) return "event";
+  return "lecture";
+}
+function parseProg(p){
+  const s=String(p.time||"").trim();
+  let m=s.match(/^(\d{1,2}\/\d{1,2}(?:\s*\([^)]*\))?)\s+(\d{1,2}:\d{2})\s*[–~\-]\s*(\d{1,2}:\d{2})/);
+  if(m) return {day:m[1].replace(/\s+/g,""),st:m[2].padStart(5,"0"),en:m[3].padStart(5,"0")};
+  m=s.match(/^(\d{1,2}:\d{2})\s*[–~\-]\s*(\d{1,2}:\d{2})/);
+  if(m) return {day:"",st:m[1].padStart(5,"0"),en:m[2].padStart(5,"0")};
+  m=s.match(/^(\d{1,2}\/\d{1,2}(?:\s*\([^)]*\))?)\s+(\d{1,2}:\d{2})/);
+  if(m) return {day:m[1].replace(/\s+/g,""),st:m[2].padStart(5,"0"),en:""};
+  m=s.match(/^(\d{1,2}:\d{2})/);
+  return {day:"",st:m?m[1].padStart(5,"0"):"",en:""};
+}
+function progDays(){ const d=[]; state.program.forEach(p=>{ const k=parseProg(p).day; if(!d.includes(k)) d.push(k); }); return d; }
+function progView(){
+  let v=""; try{ v=localStorage.getItem(PROG_LS)||""; }catch(e){}
+  if(v!=="grid"&&v!=="timeline") v = progDays().filter(Boolean).length>1 ? "grid" : "timeline";
+  return v;
+}
+function renderProgram(){
+  const prog=$("#program"); prog.innerHTML="";
+  const v=progView();
+  $("#prog-seg").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.pv===v));
+  if(!state.program.length){ prog.innerHTML=`<div class="tp-empty">등록된 프로그램이 없습니다.</div>`; return; }
+  if(v==="grid") return renderProgGrid(prog);
+  // 타임라인: 날짜별로 묶고 시간만 표시
+  let lastDay=null;
+  state.program.forEach((p,i)=>{
+    const pp=parseProg(p);
+    if(pp.day && pp.day!==lastDay){ const h=document.createElement("div"); h.className="prog-day"; h.textContent=pp.day; prog.appendChild(h); lastDay=pp.day; }
+    const timeTxt = pp.st ? (pp.st+(pp.en?"–"+pp.en:"")) : (p.time||"");
+    const el=document.createElement("div"); el.className="prog-item ptl-"+progType(p)+(p.key?" prog-key":"");
+    el.innerHTML=`
+      <div class="prog-time">${esc(timeTxt)}</div>
+      <div class="prog-rail"><div class="prog-node"></div><div class="prog-line"></div></div>
+      <div class="prog-body"><div class="prog-txt"><div class="prog-name">${esc(p.name)}</div>${p.note?`<div class="prog-note">${esc(p.note)}</div>`:""}</div><button class="edit-btn" data-edit-prog="${i}" title="수정">✎</button></div>`;
+    el.querySelector(".edit-btn").onclick=()=>editProgram(i);
+    prog.appendChild(el);
+  });
+}
+function renderProgGrid(prog){
+  const items=state.program.map((p,i)=>Object.assign({i,p},parseProg(p))).filter(x=>x.st);
+  const days=progDays();
+  const toMin=t=>{ const [h,m]=t.split(":").map(Number); return h*60+m; };
+  const bounds=[...new Set(items.flatMap(x=>[x.st, x.en||null]).filter(Boolean))].sort((a,b)=>toMin(a)-toMin(b));
+  items.forEach(x=>{ if(!x.en){ const k=bounds.indexOf(x.st); x.en=bounds[k+1]||x.st; } });
+  const rows=bounds.slice(0,-1);
+  const used=new Set(Object.keys(PTYPE).filter(k=>items.some(x=>progType(x.p)===k)));
+  let html=`<div class="pg-legend">${Object.entries(PTYPE).filter(([k])=>used.has(k)).map(([k,v])=>`<span><i class="${v.c}"></i>${v.t}</span>`).join("")}</div>`;
+  html+=`<div class="pg-scroll"><div class="pg" style="grid-template-columns:74px repeat(${days.length},minmax(118px,1fr));grid-template-rows:auto repeat(${rows.length},minmax(58px,auto))">`;
+  html+=`<div class="pg-h" style="grid-column:1;grid-row:1"></div>`;
+  days.forEach((d,ci)=>{ const m=d.match(/^(\d{1,2}\/\d{1,2})\s*\(?([^)]*)\)?/); html+=`<div class="pg-h" style="grid-column:${ci+2};grid-row:1">${m?`<b>${m[1].replace("/",".")}</b> ${esc(m[2]||"")}`:"당일"}</div>`; });
+  rows.forEach((t,ri)=>{ html+=`<div class="pg-t" style="grid-column:1;grid-row:${ri+2}"><b>${t}</b><span>${bounds[ri+1]}</span></div>`; });
+  items.forEach(x=>{
+    const ci=days.indexOf(x.day), r0=bounds.indexOf(x.st), r1=bounds.indexOf(x.en);
+    if(ci<0||r0<0) return;
+    const span=Math.max(1,(r1>r0?r1:r0+1)-r0);
+    const ty=PTYPE[progType(x.p)];
+    html+=`<button class="pg-c ${ty.c}${x.p.key?" pg-key":""}" style="grid-column:${ci+2};grid-row:${r0+2} / span ${span}" data-pgi="${x.i}" title="${esc(x.p.time)}">
+      <span class="pg-n">${esc(x.p.name)}</span>${x.p.note?`<span class="pg-s">${esc(x.p.note)}</span>`:""}</button>`;
+  });
+  html+=`</div></div>`;
+  prog.innerHTML=html;
+  prog.querySelectorAll("[data-pgi]").forEach(b=>b.onclick=()=>{ if(isAdmin) editProgram(+b.dataset.pgi); });
+}
+$("#prog-seg").querySelectorAll("button").forEach(b=>b.onclick=()=>{ try{ localStorage.setItem(PROG_LS,b.dataset.pv); }catch(e){} renderProgram(); });
 
 /* 이벤트 위임 */
 document.addEventListener("click",e=>{
