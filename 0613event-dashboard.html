@@ -865,18 +865,21 @@ function save(){
 function applyMode(){
   document.body.classList.toggle("admin", isAdmin);
 }
-let booted=false;
+let booted=false, pendingLogin=false, docLoaded=false;
+// 행사 데이터(비밀번호 포함)를 서버에서 가져오기 — 느린 휴대폰·인앱 브라우저 대비 재시도
+function fetchDoc(tries){
+  return db.collection("dashboards").doc(DASHBOARD_ID).get({source:"server"})
+    .then(s=>{ if(s.exists && s.data() && s.data().event){ state=migrate(s.data()); docLoaded=true; } else state=seeded(); return true; })
+    .catch(e=>{ console.warn("초기 로드 오류:",e); if(tries>1) return new Promise(r=>setTimeout(r,800)).then(()=>fetchDoc(tries-1)); return false; });
+}
 // 로그인 전, 저장된 비밀번호를 먼저 불러온다(변경된 비번 반영)
 function bootstrap(){
   initBackend();
   const r=sessionStorage.getItem("planinus_role");
   if(r==="admin"||r==="staff"){ booted=true; maybeSSO(); return; }
   if(useFirebase){
-    $("#gate-enter").disabled=true; $("#gate-enter").textContent="불러오는 중…";
-    db.collection("dashboards").doc(DASHBOARD_ID).get()
-      .then(s=>{ if(s.exists && s.data() && s.data().event) state=migrate(s.data()); else state=seeded(); })
-      .catch(e=>console.warn("초기 로드 오류:",e))
-      .finally(()=>{ booted=true; $("#gate-enter").disabled=false; $("#gate-enter").textContent="입장하기"; maybeSSO(); });
+    $("#gate-enter").textContent="불러오는 중…";
+    fetchDoc(3).then(()=>{ booted=true; $("#gate-enter").textContent="입장하기"; if(pendingLogin){ pendingLogin=false; login(); } });
   } else {
     loadLocal(); booted=true; maybeSSO();
   }
@@ -889,11 +892,15 @@ function maybeSSO(){
     document.body.classList.add("authed"); subscribe();
   }
 }
-function login(){
-  if(!booted){ $("#gate-err").textContent="잠시 후 다시 시도해 주세요."; return; }
+async function login(retried){
   const pw=$("#gate-pw").value;
+  if(!pw){ $("#gate-pw").focus(); return; }
+  if(!booted){ pendingLogin=true; $("#gate-err").textContent=""; $("#gate-enter").textContent="불러오는 중…"; return; }
   if(pw===state.auth.adminPw){ isAdmin=true; }
   else if(pw===state.auth.staffPw){ isAdmin=false; }
+  else if(useFirebase && !retried){   // 비밀번호가 바뀌었을 수 있으니 최신 데이터로 한 번 더 확인
+    $("#gate-enter").textContent="확인 중…"; await fetchDoc(2); $("#gate-enter").textContent="입장하기"; return login(true);
+  }
   else { $("#gate-err").textContent="비밀번호가 올바르지 않습니다."; return; }
   $("#gate-err").textContent="";
   $("#gate-pw").value="";
@@ -901,10 +908,11 @@ function login(){
   if(isAdmin){ location.href="index.html"; return; }   // 관리자는 전체 행사(허브)로
   applyMode();
   document.body.classList.add("authed");
+  if(docLoaded) renderAll();   // 이미 받은 데이터로 바로 표시(실시간 연결은 이어서)
   subscribe();
 }
-$("#gate-enter").onclick=login;
-$("#gate-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") login(); });
+$("#gate-enter").onclick=()=>login();
+$("#gate-pw").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); login(); } });
 $("#logout-btn").onclick=()=>{
   sessionStorage.removeItem("planinus_role");
   document.documentElement.classList.remove("sso");
