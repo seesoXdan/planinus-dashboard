@@ -309,7 +309,7 @@ $("#gate-pw").addEventListener("keydown",e=>{ if(e.key==="Enter") login(); });
 $("#logout-btn").onclick=()=>{ sessionStorage.removeItem("planinus_role"); document.documentElement.classList.remove("sso"); document.body.classList.remove("authed","admin"); isAdmin=false; setTimeout(()=>$("#gate-pw").focus(),100); };
 
 /* ===== 렌더 ===== */
-function ddayOf(dt){ const t=new Date(dt); if(isNaN(t)) return null; const diff=Math.ceil((t-new Date())/864e5); return diff; }
+function ddayOf(dt){ const t=new Date(dt); if(isNaN(t)) return null; const n=new Date(); return Math.round((new Date(t.getFullYear(),t.getMonth(),t.getDate())-new Date(n.getFullYear(),n.getMonth(),n.getDate()))/864e5); }   // 날짜 기준 D-day
 function fmtDate(dt){ const d=new Date(dt); if(isNaN(d)) return dt; const wd=["일","월","화","수","목","금","토"][d.getDay()]; const z=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}.${z(d.getMonth()+1)}.${z(d.getDate())} (${wd}) ${z(d.getHours())}:${z(d.getMinutes())}`; }
 function linkOf(ev){ const q=new URLSearchParams({event:ev.id, n:ev.name||"", d:ev.datetime||"", p:ev.place||""}); return DASHBOARD_FILE+"?"+q.toString(); }
 

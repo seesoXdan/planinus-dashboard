@@ -1008,10 +1008,12 @@ function tick(){
   const d=Math.floor(diff/864e5),h=Math.floor(diff%864e5/36e5),m=Math.floor(diff%36e5/6e4),s=Math.floor(diff%6e4/1e3);
   const z=n=>String(n).padStart(2,"0");
   $("#cd-d").textContent=z(d);$("#cd-h").textContent=z(h);$("#cd-m").textContent=z(m);$("#cd-s").textContent=z(s);
-  $("#dday-sign").textContent=past?"+":"-";
+  // D-day는 날짜 기준(행사일 − 오늘), 아래 카운트다운은 시작 시각까지 남은 시간
+  const dd=Math.round((new Date(target.getFullYear(),target.getMonth(),target.getDate())-new Date(now.getFullYear(),now.getMonth(),now.getDate()))/864e5);
+  $("#dday-sign").textContent = dd===0 ? "-" : (dd<0?"+":"-");
   const numEl=$("#dday-num");
-  if(d===0&&!past){numEl.textContent="DAY";numEl.style.fontSize=".55em";}
-  else{numEl.textContent=z(d);numEl.style.fontSize="";}
+  if(dd===0){numEl.textContent="DAY";numEl.style.fontSize=".55em";}
+  else{numEl.textContent=z(Math.abs(dd));numEl.style.fontSize="";}
 }
 
 const gantt=$("#gantt");
