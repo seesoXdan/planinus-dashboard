@@ -179,6 +179,10 @@ body.admin .filt-manage{display:inline-flex;align-items:center;gap:5px}
 /* 담당별 행 배경 (B안) */
 .g-row{--ot:color-mix(in srgb,var(--oc,#fff) 9%,#fff);--oth:color-mix(in srgb,var(--oc,#fff) 16%,#fff);background:var(--ot);border-radius:0;margin-bottom:2px}
 .g-row .g-label{background:var(--ot);padding-left:10px}
+.g-bar.gb-done{background:#12A150!important;box-shadow:0 0 0 2px rgba(18,161,80,.25),0 4px 10px -4px rgba(18,161,80,.6)}
+.g-bar.gb-done .owner{font-weight:800;color:#fff}
+.g-bar.gb-conf{box-shadow:inset 0 0 0 2px #fff,0 0 0 1.5px var(--st-conf)}
+.legend .lg-txt{font-size:11.5px;color:var(--ink-2)}
 .g-row:first-of-type{border-radius:8px 8px 0 0}
 .g-name{font-size:13px;font-weight:500;line-height:1.3;flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:keep-all;overflow-wrap:anywhere}
 .g-dot{width:8px;height:8px;border-radius:50%;flex:none}
@@ -370,7 +374,7 @@ body.admin .pg-c:hover{filter:brightness(.97);outline:2px solid var(--brand);out
 .li-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;white-space:nowrap}
 .st-pill{font-size:11px;font-weight:700;border-radius:999px;padding:3px 10px}
 .sp-wait{color:var(--ink-2);background:var(--bg-2)}.sp-prog{color:#1a5fb4;background:#e6effb}
-.sp-chk{color:#b4560e;background:#fde8d4}.sp-rep{color:#2f7a4c;background:#e3f1e8}.sp-done{color:#2f7a4c;background:#e3f1e8}
+.sp-chk{color:#b4560e;background:#fde8d4}.sp-rep{color:#2f7a4c;background:#e3f1e8}.sp-done{color:#fff;background:#12A150}
 .li-date{font-size:12px;color:var(--ink-2);font-weight:500}.li-date.late{color:#c0463c;font-weight:700}
 /* 목록 / 간트 전환 */
 body.tl-list #gantt,body.tl-list #gantt-tools,body.tl-list #g-legend,body.tl-list #view-seg,body.tl-list #edit-axis{display:none}
@@ -384,6 +388,8 @@ body:not(.tl-list) #list-view{display:none}
 .lg-late{color:#c0463c}.lg-week{color:var(--brand)}
 .lg-items{display:flex;flex-direction:column;gap:6px}
 .li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;text-align:left;font-family:var(--font);background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:11px 14px;cursor:pointer;color:var(--ink);transition:background .12s}
+.lg-items .li.li-done{background:#E7F6EC;border-color:#9AD9B1}
+.lg-items .li.li-done .li-name{color:#0E7A3D}
 .lg-items .li:hover{background:color-mix(in srgb,var(--oc,#fff) 15%,#fff)}
 .li-dot{width:9px;height:9px;border-radius:50%}
 .li-main{display:flex;flex-direction:column;gap:3px;min-width:0}
@@ -637,12 +643,7 @@ body:not(.tl-list) #list-view{display:none}
       <div class="g-tokens" id="g-tokens"></div>
     </div>
     <div class="gantt" id="gantt"></div>
-    <div class="legend" id="g-legend">
-      <span><i style="background:#8d8a80"></i>대기</span>
-      <span><i style="background:#2563B0"></i>진행중</span>
-      <span><i style="background:#B5851C"></i>컨펌요청</span>
-      <span><i style="background:#3C8A5B"></i>완료</span>
-    </div>
+    <div class="legend" id="g-legend"></div>
   </section>
 
   <!-- ③ 당일 프로그램 -->
@@ -1079,7 +1080,7 @@ function renderGantt(){
       </div>
       <div class="g-track">
         <div class="g-grid">${ticks.map(t=>`<i style="left:${pct(t.date)}%"></i>`).join("")}</div>
-        <div class="g-bar ${st.bar}" style="left:${left}%;width:${width}%;animation-delay:${Math.min(idx*.012,.35)}s"><span class="owner">${esc(ownerLabel(task.owner))}</span></div>
+        <div class="g-bar gb-${task.status||"wait"}" style="left:${left}%;width:${width}%;animation-delay:${Math.min(idx*.012,.35)}s;background:${ownerColor(ownerLabel(task.owner))}"><span class="owner">${task.status==="done"?"✓ 완료 · ":({prog:"● ",conf:"! "}[task.status]||"")}${esc(ownerLabel(task.owner))}</span></div>
       </div>`;
     inner.appendChild(row);
     const bar=row.querySelector(".g-bar"), tip=$("#tooltip");
@@ -1845,7 +1846,7 @@ function renderList(){
       const late=g.k==="late";
       const dl = late ? `${Math.round((D(todayStr())-D(t.end))/864e5)}일 지남` : (g.k==="next"||g.k==="later") ? `${mdDot(t.start)} – ${mdDot(t.end)}` : mdDot(t.end);
       const oc=ownerColor(ownerLabel(t.owner));
-      return `<button class="li" data-li="${i}" style="--oc:${oc}">
+      return `<button class="li${t.status==="done"?" li-done":""}" data-li="${i}" style="--oc:${oc}">
         <span class="li-dot" style="background:${SDOT[t.status]||SDOT.wait}"></span>
         <span class="li-main"><span class="li-name">${esc(t.name)}</span>
           <span class="li-sub">${esc(t.cat||"")} · <b class="li-who">${esc(ownerLabel(t.owner))}</b>${c?` <i class="li-b b-c">💬 ${c}</i>`:""}</span></span>
@@ -1883,6 +1884,12 @@ function ownerColor(label){
   const others=[...new Set(state.tasks.map(t=>ownerLabel(t.owner)))].filter(l=>!/플래니어스|planinus/i.test(l)&&l!=="공동").sort();
   const i=others.indexOf(label); return OWNER_PALETTE[(i<0?0:i)%OWNER_PALETTE.length];
 }
+function renderGanttLegend(){
+  const el=$("#g-legend"); if(!el) return;
+  const labels=[...new Set(state.tasks.map(t=>ownerLabel(t.owner)))];
+  el.innerHTML=labels.map(o=>`<span><i style="background:${ownerColor(o)}"></i>${esc(o)}</span>`).join("")+
+    `<span class="lg-txt">● 진행중</span><span class="lg-txt">! 컨펌요청</span><span><i style="background:#12A150"></i>✓ 완료</span>`;
+}
 function renderOwnerRow(){
   const el=$("#owner-row"); if(!el) return;
   const pref=["이화여대","플래니어스","공동"];
@@ -1893,7 +1900,7 @@ function renderOwnerRow(){
   el.querySelectorAll("[data-owner]").forEach(b=>b.onclick=()=>{ ui.owner=b.dataset.owner; renderFilters(); renderGantt(); renderList(); });
 }
 function renderFilters(){
-  renderCatChips(); renderOwnerRow();
+  renderCatChips(); renderOwnerRow(); renderGanttLegend();
   const sheet=$("#g-sheet"), tok=$("#g-tokens"); if(!sheet) return;
   const cnt=q=>state.tasks.filter(t=>quickMatch(t,q)).length;
   const chip=(label,on,fn)=>{ const b=document.createElement("button"); b.className="filt filt-sm"+(on?" on":""); b.innerHTML=label; b.onclick=fn; return b; };
